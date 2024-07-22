@@ -1,0 +1,84 @@
+---
+title: "Split .gb file"
+author: "Maria Vlachonikolou"
+date: "2024-07-22"
+output: html_document
+---
+
+
+This script converts a .gb file with multiple entries to multiple single entry files. 
+
+First we load the file as a dataframe and then split each entry to a separate dataframe. 
+
+
+```{r}
+#Specify input file path and output directory
+file_path <- "~/Downloads/RSV.gb"  # Replace with your actual file path
+
+output_dir <- "~/Downloads/gb/"  # Replace with your actual directory path
+
+```
+
+```{r}
+#Load .gb as a dataframe
+gbk <- readLines(file_path)
+
+df <- data.frame(text = gbk, stringsAsFactors = FALSE)
+
+
+#determine the beginning of each accession 
+locus_indices <- grep("^LOCUS", df$text)
+locus_indices<-locus_indices[2:660]
+
+#Split each accession to different data frames and save on a list  
+df_list <- list()
+
+start_index <- 1
+
+for (i in seq_along(locus_indices)) {
+  # Calculate the end index for the current dataframe
+  end_index <- locus_indices[i] - 1
+  
+  # Extract the sub-dataframe
+  sub_df <- df[start_index:end_index, , drop = FALSE]
+  
+  # Add the sub-dataframe to the list
+  df_list[[i]] <- sub_df
+  
+  # Update the start index for the next iteration
+  start_index <- locus_indices[i]
+}
+
+if (start_index <= nrow(df)) {
+  df_list[[length(locus_indices) + 1]] <- df[start_index:nrow(df), , drop = FALSE]
+}
+```
+
+
+
+Then we save each dataframe as a .gb file. 
+```{r}
+# Function to extract accession number of each dataframe
+extract_accession <- function(df) {
+  accession_line <- grep("^ACCESSION ", df$text, value = TRUE)
+  if (length(accession_line) > 0) {
+    return(sub("^ACCESSION\\s+", "", accession_line)) 
+    #accession_number <- trimws(accession_number)
+
+  }
+  return(NA)
+}
+
+
+# Export each element of the list to a separate file
+for (i in seq_along(df_list)) {
+  accession_number <- extract_accession(df_list[[i]])
+  if (!is.na(accession_number)) {
+    file_name <- paste0(output_dir, accession_number, ".gb")
+    write.table(df_list[[i]], file = file_name, row.names = FALSE, col.names = FALSE, quote = FALSE)
+  } 
+}
+
+
+```
+
