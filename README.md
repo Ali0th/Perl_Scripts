@@ -1,1 +1,1 @@
-Perl scripts for various genomic analysis
+Perl scripts for various genomic analyses. 
